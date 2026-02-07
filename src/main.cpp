@@ -9,7 +9,9 @@ using namespace cv;
 int main() {
     // 创建装甲板检测器
     ArmorDetector detector;
-    detector.setColor(ArmorDetector::Color::RED);
+    // 修改了preprocess函数，setColor不再影响颜色分割，
+    // 但为了保持类接口一致，可以保留。或者稍后可以从ArmorDetector类中移除相关代码。
+    detector.setColor(ArmorDetector::Color::RED); 
     
     // 创建视频捕获对象
     VideoCapture cap;
@@ -28,36 +30,34 @@ int main() {
         return -1;
     }
     
-    cout << "视频源打开成功！" << endl;
-    cout << "按ESC键退出程序" << endl;
+    cout << "程序开始运行，自动识别红蓝双色装甲板灯条..." << endl;
+    cout << "按 ESC 键可退出程序。" << endl;
     
     // 创建显示窗口
     namedWindow("原始视频", WINDOW_AUTOSIZE);
     namedWindow("二值化图像", WINDOW_AUTOSIZE);
     namedWindow("装甲板检测结果", WINDOW_AUTOSIZE);
     
+    Mat frame;
+    
     while (true) {
-        Mat frame;
         cap >> frame;
-        
         if (frame.empty()) {
-            cout << "视频播放结束！" << endl;
+            cout << "视频处理结束。" << endl;
             break;
         }
         
-        // 缩放图像以加快处理速度
         resize(frame, frame, Size(640, 480));
         
-        // 装甲板检测
+        // --- 核心：执行检测 ---
         vector<LightBar> light_bars = detector.detect(frame);
-        
-        // 创建结果图像
         Mat result = frame.clone();
         Mat binary = detector.preprocess(frame);
+        // --- 检测结束 ---
         
-        // 绘制检测到的灯条
+        // --- 绘制结果：此处可以根据后续需求区分颜色，目前统一用绿色 ---
         for (const auto& light_bar : light_bars) {
-            light_bar.draw(result, Scalar(0, 255, 0));
+            light_bar.draw(result, Scalar(0, 255, 0)); // 所有灯条先用绿色框绘制
         }
         
         // 显示检测到的灯条数量
@@ -70,9 +70,12 @@ int main() {
         imshow("二值化图像", binary);
         imshow("装甲板检测结果", result);
         
-        // 按键处理
+        // 唯一的控制：ESC键退出。延迟时间可控制播放速度。
         int key = waitKey(30);
-        if (key == 27) break;  // ESC退出
+        if (key == 27) { // ESC
+            cout << "用户中断退出。" << endl;
+            break;
+        }
     }
     
     cap.release();

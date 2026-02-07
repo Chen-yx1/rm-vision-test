@@ -45,7 +45,7 @@ cv::Mat ArmorDetector::preprocess(const cv::Mat& frame) {
     // 方法：使用较高的阈值直接提取最亮的部分
     // 参数说明：200是阈值，255是最大值，THRESH_BINARY是二值化类型
     // 这个值可能需要根据你的视频微调：如果核心没出来，就降低（如190）；如果噪声多，就提高（如210）
-    cv::threshold(gray, bright_mask, 190, 255, cv::THRESH_BINARY);
+    cv::threshold(gray, bright_mask, 150, 255, cv::THRESH_BINARY);
 
     // 3. 融合颜色与亮度信息
     cv::Mat fused_mask;

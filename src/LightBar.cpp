@@ -1,6 +1,6 @@
 #include "LightBar.h"
 #include <iostream>
-#include <cmath>
+#include <cmath>  // 添加cmath头文件用于abs函数
 
 LightBar::LightBar() : width(0), height(0), angle(0), area(0) {}
 
@@ -14,28 +14,35 @@ LightBar::LightBar(const cv::RotatedRect& lightRect)
 }
 
 bool LightBar::isValid() const {
-    // 1. 面积过滤 - 去除太小的噪点
-    if (area < 50) return false;
-    
-    // 2. 长宽比过滤 - 灯条通常较长
-    float aspect_ratio;
-    if (height > width) {
-        aspect_ratio = height / width;
-    } else {
-        aspect_ratio = width / height;
+    // 1. 面积过滤 - 根据实际画面大小调整
+    if (area < 100 || area > 5000) return false; 
+
+    // 2. 长宽比过滤 - 灯条是竖长的
+    float cur_width = rect.size.width;
+    float cur_height = rect.size.height;
+    bool is_vertical = (cur_height > cur_width); 
+    if (!is_vertical) return false; // 拒绝横摆的矩形
+
+    float aspect_ratio = cur_height / cur_width; // 长边/短边
+    if (aspect_ratio < 2.0 || aspect_ratio > 8.0) return false;
+
+    // 3. 【核心修改】放宽倾斜角度至45度
+    // RotatedRect的angle范围是[-90, 0)，-90度表示完全竖直。
+    // 计算与竖直方向(-90度)的夹角差。
+    float angle_from_vertical = std::abs(-90.0f - angle);
+    // 允许最多45度的倾斜（覆盖-90度到-45度）
+    if (angle_from_vertical > 45.0f) {
+        return false; 
     }
-    
-    // 灯条的长宽比通常在2:1到8:1之间
-    if (aspect_ratio < 1.5 || aspect_ratio > 8.0) return false;
-    
-    // 3. 角度过滤 - 灯条通常接近垂直
-    float abs_angle = std::abs(angle);
-    
-    // 允许一定的倾斜角度（±60度以内）
-    if (abs_angle > 60) return false;
-    
+
+    // 4. 轮廓饱满度过滤 - 可选，对“圈”状误检有效
+    cv::Rect bounding_rect = rect.boundingRect();
+    float fullness = area / (bounding_rect.width * bounding_rect.height);
+    if (fullness < 0.5) return false; 
+
     return true;
 }
+
 
 std::vector<cv::Point2f> LightBar::getPoints() const {
     cv::Point2f pts[4];
